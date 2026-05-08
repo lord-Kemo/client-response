@@ -916,7 +916,7 @@
   </div>
 
   <div class="submit-wrap">
-    <div class="submit-hint">Submit once complete. A local file record is created on this machine for every response.</div>
+    <div class="submit-hint">Submit once complete. If online saving is unavailable, a JSON copy downloads automatically.</div>
     <button type="submit" class="submit-btn" id="submitBtn">Submit Confirmation</button>
     <div class="submit-status" id="submitStatus" aria-live="polite"></div>
   </div>
@@ -932,12 +932,14 @@
 
 </div>
 
+<script src="config.js"></script>
 <script>
   (function () {
     const form = document.getElementById('confirmationForm');
     const submitBtn = document.getElementById('submitBtn');
     const submitStatus = document.getElementById('submitStatus');
-    const saveEndpoint = '/api/submit';
+    const configuredSaveEndpoint = (window.VALOR_SAVE_ENDPOINT || '').trim();
+    const saveEndpoint = configuredSaveEndpoint || '/api/submit';
 
     function keyFromElement(element, index) {
       if (element.name) return element.name;
@@ -1002,25 +1004,25 @@
         const payload = collectPayload();
         const response = await fetch(saveEndpoint, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify(payload)
         });
 
         if (response.ok) {
           const result = await response.json();
-          submitStatus.textContent = `Saved successfully. File: ${result.fileName}`;
+          submitStatus.textContent = result.fileName ? `Saved successfully. File: ${result.fileName}` : 'Saved successfully.';
           submitStatus.style.color = 'var(--accent)';
           return;
         }
 
         const fallbackFileName = downloadPayload(payload);
-        submitStatus.textContent = `Static hosting fallback: downloaded ${fallbackFileName}. Connect the local server to save to disk automatically.`;
+        submitStatus.textContent = `Online save unavailable. Downloaded ${fallbackFileName}; please send this file to Valor AI.`;
         submitStatus.style.color = 'var(--warn)';
       } catch (error) {
         try {
           const payload = collectPayload();
           const fallbackFileName = downloadPayload(payload);
-          submitStatus.textContent = `Static hosting fallback: downloaded ${fallbackFileName}. ${error.message}`;
+          submitStatus.textContent = `Online save unavailable. Downloaded ${fallbackFileName}; please send this file to Valor AI.`;
           submitStatus.style.color = 'var(--warn)';
         } catch (fallbackError) {
           submitStatus.textContent = `Save failed: ${fallbackError.message}`;
